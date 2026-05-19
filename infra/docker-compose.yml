@@ -1,0 +1,17 @@
+# Backend en contenedor para desarrollo.
+# Supabase es gestionado (nube), no se levanta aquí.
+#
+#   docker compose -f infra/docker-compose.yml up --build
+#
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../backend/.env
+    volumes:
+      - ../data:/data
+    restart: unless-stopped

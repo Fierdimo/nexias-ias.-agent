@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Entorno / secretos
+.env
+*.local
+
+# Credenciales Google
+*-credentials.json
+service-account*.json
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Documentos subidos (datos del cliente)
+data/documents/*
+!data/documents/.gitkeep
+
+# OS / editor
+.DS_Store
+.idea/
+
+data/

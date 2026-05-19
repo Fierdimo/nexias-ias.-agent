@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Nexias",
+    "slug": "nexias",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nexias.app"
+    },
+    "android": {
+      "package": "com.nexias.app"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9ff362a8-270c-4046-bdfa-38be99cd2b99"
+      }
+    },
+    "owner": "fierdimo",
+    "scheme": "nexias",
+    "plugins": [
+      "expo-secure-store",
+      "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "color": "#0f172a"
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.REEMPLAZA_CON_TU_IOS_CLIENT_ID"
+        }
+      ]
+    ]
+  }
+}
