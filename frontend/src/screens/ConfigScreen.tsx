@@ -74,7 +74,7 @@ export default function ConfigScreen() {
       <Text style={styles.title}>Google Sheets</Text>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Restaurante</Text>
+        <Text style={styles.label}>Empresa</Text>
         <Text style={styles.value}>{info?.name}</Text>
         <Text style={styles.label}>Estado</Text>
         <Text style={styles.value}>

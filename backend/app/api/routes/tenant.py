@@ -1,4 +1,4 @@
-"""Configuración del restaurante: ver y asignar su Google Sheet.
+"""Configuración de la empresa: ver y asignar su Google Sheet.
 
 Solo el rol `admin` puede cambiar la hoja. En modo demo devuelve datos
 ficticios y la escritura es no-op.
@@ -33,10 +33,10 @@ def read_tenant(
     settings: Settings = Depends(get_settings),
 ) -> TenantInfo:
     if not settings.has_supabase:
-        return _info(user.tenant_id, "Restaurante demo", None, True)
+        return _info(user.tenant_id, "Empresa demo", None, True)
     tenant = get_tenant(user.tenant_id)
     if tenant is None:
-        raise HTTPException(status_code=404, detail="Restaurante no encontrado")
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
     return _info(
         user.tenant_id, tenant["name"], tenant.get("sheet_id"), False
     )
@@ -57,9 +57,9 @@ def set_sheet(
     sheet_id = extract_sheet_id(req.sheet)
 
     if not settings.has_supabase:  # demo: no persiste
-        return _info(user.tenant_id, "Restaurante demo", sheet_id, True)
+        return _info(user.tenant_id, "Empresa demo", sheet_id, True)
 
     set_tenant_sheet(user.tenant_id, sheet_id)
     tenant = get_tenant(user.tenant_id)
-    name = tenant["name"] if tenant else "Restaurante"
+    name = tenant["name"] if tenant else "Empresa"
     return _info(user.tenant_id, name, sheet_id, False)

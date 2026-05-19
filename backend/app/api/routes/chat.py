@@ -29,7 +29,7 @@ from app.services.tenants import get_tenant
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 SYSTEM_PROMPT = (
-    "Eres un asistente de analítica para restaurantes. Respondes en español, "
+    "Eres un asistente de analítica de negocio para empresas. Respondes en español, "
     "claro y breve. REGLA CRÍTICA: usa EXCLUSIVAMENTE los números del bloque "
     "DATOS. Si la respuesta no está en los datos, dilo explícitamente; nunca "
     "inventes cifras ni tendencias."
@@ -41,7 +41,7 @@ def chat(
     req: ChatRequest,
     user: CurrentUser = Depends(get_current_user),
 ) -> ChatResponse:
-    # Prioridad de fuente de datos del restaurante:
+    # Prioridad de fuente de datos de la empresa:
     #   1) hoja elegida en el Picker (OAuth del usuario, sin fricción)
     #   2) hoja vía service account (tenants.sheet_id, fallback)
     #   3) dataset de muestra

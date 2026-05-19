@@ -1,7 +1,7 @@
 """Autenticación: el backend hace de proxy de Supabase Auth.
 
 La app móvil solo habla con FastAPI (no incrusta el SDK de Supabase).
-- /auth/signup: crea usuario (confirmado), su restaurante y la membresía
+- /auth/signup: crea usuario (confirmado), su empresa y la membresía
   de admin, y devuelve sesión iniciada. Onboarding en una sola llamada.
 - /auth/login: valida credenciales y devuelve token + perfil.
 - /auth/me: perfil del token actual.
@@ -70,11 +70,11 @@ def signup(
             detail=f"No se pudo crear el usuario: {exc}",
         )
 
-    # 2. Crear restaurante (tenant) y 3. membresía como admin
+    # 2. Crear empresa (tenant) y 3. membresía como admin
     try:
         tenant = (
             supabase.table("tenants")
-            .insert({"name": req.restaurant_name})
+            .insert({"name": req.company_name})
             .execute()
         )
         tenant_id = str(tenant.data[0]["id"])
@@ -88,7 +88,7 @@ def signup(
         except Exception:
             pass
         raise HTTPException(
-            status_code=500, detail=f"No se pudo crear el restaurante: {exc}"
+            status_code=500, detail=f"No se pudo crear la empresa: {exc}"
         )
 
     # 4. Iniciar sesión y devolver tokens
@@ -136,7 +136,7 @@ def login(
     if membership is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="El usuario no pertenece a ningún restaurante",
+            detail="El usuario no pertenece a ninguna empresa",
         )
     tenant_id, role = membership
 

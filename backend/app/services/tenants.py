@@ -1,4 +1,4 @@
-"""Acceso a la configuración del restaurante (tenant) en Supabase."""
+"""Acceso a la configuración de la empresa (tenant) en Supabase."""
 from __future__ import annotations
 
 from app.db.supabase_client import get_supabase
@@ -21,7 +21,7 @@ def get_tenant(tenant_id: str) -> dict | None:
 
 
 def set_tenant_sheet(tenant_id: str, sheet_id: str | None) -> None:
-    """Actualiza la Google Sheet asociada al restaurante."""
+    """Actualiza la Google Sheet asociada a la empresa."""
     supabase = get_supabase()
     if supabase is None:
         return

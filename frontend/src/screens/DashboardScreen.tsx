@@ -7,7 +7,7 @@ export default function DashboardScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Resumen</Text>
-      <Text style={styles.meta}>Restaurante: {profile.tenant_id}</Text>
+      <Text style={styles.meta}>Empresa: {profile.tenant_id}</Text>
       <Text style={styles.meta}>Rol: {profile.role}</Text>
       <Text style={styles.soon}>
         📊 Próximamente: métricas y gráficos de ventas (Fase 1 del roadmap).

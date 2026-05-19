@@ -1,8 +1,9 @@
 # Roadmap — Nexias
 
-Asistente de consultas en lenguaje natural para restaurantes. Micro SaaS
-multi-tenant con marca propia. Arquitectura modular: el éxito depende de la
-capa de **datos + retrieval + herramientas externas**, no del modelo.
+Asistente que transforma datos de **cualquier empresa** en informes
+concisos en lenguaje natural. Micro SaaS multi-tenant con marca propia.
+Arquitectura modular: el éxito depende de la capa de **datos + retrieval
++ herramientas externas**, no del modelo.
 
 ## Estado actual (MVP base — implementado)
 
@@ -19,7 +20,7 @@ capa de **datos + retrieval + herramientas externas**, no del modelo.
 ## Fase 1 — Producto vendible (en curso)
 
 - [x] Pantalla de login/signup en la app (backend proxy de Supabase Auth)
-- [x] Onboarding en una llamada: signup crea usuario + restaurante + membresía
+- [x] Onboarding en una llamada: signup crea usuario + empresa + membresía
 - [x] Persistir token de sesión cifrado en el dispositivo (expo-secure-store)
 - [x] Gate de auth + logout + 401 → cierre de sesión automático
 - [x] Manejo de errores (red caída, credenciales, sesión expirada)
@@ -29,9 +30,21 @@ capa de **datos + retrieval + herramientas externas**, no del modelo.
 - [~] "Entrar con Google" + Picker (scope drive.file, sin CASA):
       backend listo (OAuth, refresh cifrado, data_sources, /google/*);
       falta frontend (botón OAuth + Picker en WebView)
-- [ ] Selector de restaurante si el usuario pertenece a varios
+- [ ] Selector de empresa si el usuario pertenece a varias
 - [ ] Memoria de conversación (historial + resumen periódico)
 - [ ] Dashboard básico de métricas (no solo chat)
+
+## Fase 1.5 — Esquema flexible (datos de cualquier empresa)
+
+Hoy la analítica asume columnas fijas
+(`fecha|producto|categoria|cantidad|ingresos`). Para servir a cualquier
+empresa, las columnas deben ser libres y entendidas por IA.
+
+- [ ] Perfilado automático de la hoja (tipos, columnas, fechas, numéricas)
+- [ ] Métricas genéricas según el perfil (no hardcodear nombres de columna)
+- [ ] El LLM interpreta el esquema y la intención de la consulta
+- [ ] Cálculos deterministas (pandas) sobre columnas detectadas → anti-alucinación
+- [ ] Dataset de muestra genérico (no específico de restaurante)
 
 ## Fase 2 — IA sobre documentos (RAG completo)
 
@@ -43,7 +56,7 @@ capa de **datos + retrieval + herramientas externas**, no del modelo.
 
 ## Fase 3 — Escala y monetización
 
-- [ ] Onboarding self-service de nuevos restaurantes
+- [ ] Onboarding self-service de nuevas empresas
 - [ ] Planes/límites de uso por tenant
 - [ ] Métricas de costo de LLM por cliente
 - [ ] Comparativas y proyecciones avanzadas

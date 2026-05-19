@@ -17,7 +17,7 @@ def test_chat_demo_mode():
     assert r.status_code == 200
     body = r.json()
     assert body["is_demo"] is True
-    assert body["tenant_id"] == "demo-restaurant"
+    assert body["tenant_id"] == "demo-company"
     # Las métricas se calculan fuera del LLM, deben existir siempre.
     assert "ingresos_ultimos_7d" in body["metrics"]
 
@@ -35,7 +35,7 @@ def test_auth_demo_flow():
     # ...y el token sirve para /auth/me.
     me = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me.status_code == 200
-    assert me.json()["tenant_id"] == "demo-restaurant"
+    assert me.json()["tenant_id"] == "demo-company"
 
 
 def test_tenant_config_demo():

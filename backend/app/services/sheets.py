@@ -1,4 +1,4 @@
-"""Lectura de datos de ventas desde Google Sheets, una hoja por restaurante.
+"""Lectura de datos desde Google Sheets, una hoja por empresa.
 
 Estructura de hoja esperada (primera fila = encabezados):
     fecha | producto | categoria | cantidad | ingresos
@@ -104,7 +104,7 @@ def load_sales(sheet_id: str | None = None) -> tuple[pd.DataFrame, bool]:
         df = pd.DataFrame(sheet.get_all_records())
     except Exception as exc:
         raise SheetAccessError(
-            "No pude leer la hoja del restaurante. Verifica el ID y que "
+            "No pude leer la hoja de la empresa. Verifica el ID y que "
             f"esté compartida con el service account. Detalle: {exc}"
         )
 

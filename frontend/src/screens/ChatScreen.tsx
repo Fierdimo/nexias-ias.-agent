@@ -22,7 +22,7 @@ export default function ChatScreen() {
     {
       id: "0",
       role: "bot",
-      text: "Hola 👋 Pregúntame sobre ventas, productos o tendencias del restaurante.",
+      text: "Hola 👋 Pregúntame sobre ventas, métricas o tendencias de tu negocio.",
     },
   ]);
   const [input, setInput] = useState("");

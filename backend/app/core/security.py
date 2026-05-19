@@ -4,7 +4,7 @@ Flujo:
 - El frontend hace login con Supabase Auth y obtiene un access_token (JWT).
 - Lo manda en `Authorization: Bearer <token>`.
 - Aquí validamos el token contra Supabase y resolvemos el tenant
-  (restaurante) y el rol del usuario desde la tabla `memberships`.
+  (empresa) y el rol del usuario desde la tabla `memberships`.
 
 En modo demo (sin Supabase) se acepta un usuario ficticio para poder
 probar el chat en local sin infraestructura.
@@ -19,7 +19,7 @@ from app.db.supabase_client import get_supabase
 DEMO_USER = {
     "user_id": "demo-user",
     "email": "demo@local",
-    "tenant_id": "demo-restaurant",
+    "tenant_id": "demo-company",
     "role": "admin",
 }
 
@@ -88,7 +88,7 @@ def resolve_user_from_token(
     if membership is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="El usuario no pertenece a ningún restaurante",
+            detail="El usuario no pertenece a ninguna empresa",
         )
     tenant_id, role = membership
     return CurrentUser(

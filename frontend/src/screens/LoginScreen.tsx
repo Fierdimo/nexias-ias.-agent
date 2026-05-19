@@ -19,7 +19,7 @@ export default function LoginScreen({ onAuth }: Props) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [restaurant, setRestaurant] = useState("");
+  const [company, setCompany] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,14 +31,14 @@ export default function LoginScreen({ onAuth }: Props) {
       setError("Email y contraseña son obligatorios.");
       return;
     }
-    if (isSignup && restaurant.trim().length < 2) {
-      setError("Indica el nombre del restaurante.");
+    if (isSignup && company.trim().length < 2) {
+      setError("Indica el nombre de la empresa.");
       return;
     }
     setLoading(true);
     try {
       const res = isSignup
-        ? await signup(email.trim(), password, restaurant.trim())
+        ? await signup(email.trim(), password, company.trim())
         : await login(email.trim(), password);
       onAuth({ token: res.access_token, profile: res.profile });
     } catch (e: any) {
@@ -56,7 +56,7 @@ export default function LoginScreen({ onAuth }: Props) {
       <View style={styles.card}>
         <Text style={styles.brand}>Nexias</Text>
         <Text style={styles.subtitle}>
-          {isSignup ? "Crea tu restaurante" : "Inicia sesión"}
+          {isSignup ? "Crea tu empresa" : "Inicia sesión"}
         </Text>
 
         <TextInput
@@ -77,9 +77,9 @@ export default function LoginScreen({ onAuth }: Props) {
         {isSignup && (
           <TextInput
             style={styles.input}
-            placeholder="Nombre del restaurante"
-            value={restaurant}
-            onChangeText={setRestaurant}
+            placeholder="Nombre de la empresa"
+            value={company}
+            onChangeText={setCompany}
           />
         )}
 
@@ -108,7 +108,7 @@ export default function LoginScreen({ onAuth }: Props) {
           <Text style={styles.switch}>
             {isSignup
               ? "¿Ya tienes cuenta? Inicia sesión"
-              : "¿Nuevo? Crea tu restaurante"}
+              : "¿Nuevo? Crea tu empresa"}
           </Text>
         </TouchableOpacity>
       </View>

@@ -102,11 +102,11 @@ export function login(email: string, password: string) {
 export function signup(
   email: string,
   password: string,
-  restaurantName: string
+  companyName: string
 ) {
   return request<AuthResponse>("/auth/signup", {
     method: "POST",
-    body: { email, password, restaurant_name: restaurantName },
+    body: { email, password, company_name: companyName },
   });
 }
 

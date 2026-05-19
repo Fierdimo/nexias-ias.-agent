@@ -1,8 +1,9 @@
 # Nexias
 
-Asistente de consultas en lenguaje natural para restaurantes (micro SaaS
-multi-tenant). Chat móvil que responde sobre ventas, productos y tendencias
-usando datos reales de Google Sheets y un LLM (Kimi por defecto).
+Asistente que convierte los datos de **cualquier empresa** en informes
+concisos en lenguaje natural (micro SaaS multi-tenant). Chat móvil que
+responde sobre ventas, métricas y tendencias usando datos reales de
+Google Sheets y un LLM (Kimi por defecto).
 
 > **Modo demo:** sin credenciales el sistema funciona con un usuario y un
 > dataset de muestra. Puedes probarlo todo en local antes de configurar nada.
@@ -65,7 +66,7 @@ Edita `backend/.env`:
   Para OpenAI: `LLM_PROVIDER=openai` y la base URL de OpenAI.
 - **Supabase:** crea el proyecto, ejecuta `infra/supabase_schema.sql` en el
   SQL Editor y rellena `SUPABASE_URL` / `SUPABASE_SERVICE_KEY`.
-- **Google Sheets:** ver §6 (modelo: una hoja por restaurante).
+- **Google Sheets:** ver §6 (modelo: una hoja por empresa).
 
 `/health` confirma qué integraciones están activas.
 
@@ -77,12 +78,12 @@ El backend hace de proxy de Supabase Auth; la app solo habla con FastAPI.
 en el SQL Editor de Supabase (crea `tenants`, `memberships`, `query_log` + RLS).
 
 **Onboarding en una llamada** — `POST /auth/signup` crea el usuario (ya
-confirmado, sin verificación por email), su restaurante y la membresía de
+confirmado, sin verificación por email), su empresa y la membresía de
 admin, y devuelve la sesión:
 
 ```bash
 curl -X POST http://localhost:8000/auth/signup -H 'Content-Type: application/json' \
-  -d '{"email":"dueno@miresto.com","password":"secreto123","restaurant_name":"Mi Resto"}'
+  -d '{"email":"dueno@miempresa.com","password":"secreto123","company_name":"Mi Empresa"}'
 ```
 
 Luego `POST /auth/login` con email/password devuelve `access_token`. La app:
@@ -124,9 +125,9 @@ Repite el build **solo cuando cambien dependencias nativas o `app.json`**
 Perfiles en `eas.json`: `development` (dev client), `preview` (APK interno
 de QA), `production` (store, con autoincremento de versión).
 
-## 6. Google Sheets por restaurante (Fase 1)
+## 6. Google Sheets por empresa (Fase 1)
 
-Cada restaurante (tenant) tiene su propia hoja. Un **único service account**
+Cada empresa (tenant) tiene su propia hoja. Un **único service account**
 puede leer todas las hojas que estén compartidas con su email.
 
 **Setup del service account (una sola vez):**
@@ -138,7 +139,7 @@ puede leer todas las hojas que estén compartidas con su email.
 4. Reinicia el backend. `GET /tenant` ya devuelve el email del service
    account (`client_email` del JSON).
 
-**Conectar la hoja de un restaurante (desde la app, sin SQL):**
+**Conectar la hoja de una empresa (desde la app, sin SQL):**
 - Drawer → **Configuración** (solo rol `admin`).
 - Comparte tu Google Sheet con el email del service account (permiso Lector).
 - Pega el **enlace o ID** de la hoja y guarda. Queda en `tenants.sheet_id`.
