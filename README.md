@@ -163,24 +163,38 @@ selector oficial. Scope **`drive.file`** → la app solo ve lo elegido →
 2. Pantalla de consentimiento OAuth → External → modo Testing → añade tus
    emails de prueba. Scopes: `openid`, `email`, `profile`,
    `.../auth/drive.file`.
-3. Credenciales:
-   - **OAuth client tipo "Web"** → copia *Client ID* y *Client secret*.
-     Redirect URIs autorizados: el de `expo-auth-session` (te lo digo al
-     cablear el frontend). JS origins autorizados: la URL del backend
-     (para la página del Picker).
+3. Credenciales (crea TRES OAuth clients en el mismo proyecto):
+   - **Web** → *Client ID* + *Client secret*. JS origins autorizados: la
+     URL del backend (para la página del Picker). Este es el que el
+     backend usa para canjear el `serverAuthCode`.
+   - **iOS** (si vas a probar en iPhone) → *Client ID* + *iOS URL scheme*
+     (formato `com.googleusercontent.apps.<id>`). Bundle ID
+     `com.nexias.app`.
+   - **Android** (si vas a probar en Android) → package `com.nexias.app`
+     + huella SHA-1 del keystore del dev build
+     (`eas credentials -p android` te la da).
    - **API key** (restringida a Picker API).
 4. Anota el **número de proyecto** (Configuración del proyecto) = appId.
-5. En `backend/.env`: `GOOGLE_OAUTH_CLIENT_ID`,
+5. En `backend/.env`: `GOOGLE_OAUTH_CLIENT_ID` (el del Web),
    `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_API_KEY`,
    `GOOGLE_PROJECT_NUMBER`, y `TOKEN_ENC_KEY`
    (`python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"`).
    Reinicia el backend.
+6. En `frontend/.env`: `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (mismo Web del
+   paso 5) y, si usas iPhone, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
+7. En `frontend/app.json` reemplaza `iosUrlScheme` del plugin
+   `@react-native-google-signin/google-signin` por el de tu OAuth iOS
+   (lo dice como `com.googleusercontent.apps.<id>`).
+8. **Rebuild del dev client EAS** (google-signin es nativo, no corre en
+   Expo Go ni en el dev client viejo):
+   `npx eas-cli build --profile development --platform android` (o iOS).
+   Reinstala el binario en el teléfono.
 
-**Flujo:** móvil → login Google (offline) → manda *server auth code* a
-`POST /google/connect` → backend guarda refresh token cifrado → usuario
-abre el Picker (WebView a `GET /google/picker`) → elige hojas →
-`POST /google/sources`. El chat usa esa hoja vía OAuth (prioridad sobre
-el service account). `GET /google/status` indica el estado.
+**Flujo (en la app):** Drawer → Configuración → "Conectar con Google" →
+login nativo → backend canjea el `serverAuthCode` y guarda el refresh
+token cifrado → "Elegir hojas" abre el Picker en un WebView → al
+seleccionar, las hojas quedan en `data_sources`. El chat usa esas hojas
+vía OAuth (prioridad sobre el service account).
 
 `GET /health` y `GET /google/status` confirman si está configurado.
 

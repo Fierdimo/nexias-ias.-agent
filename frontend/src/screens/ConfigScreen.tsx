@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,15 +9,35 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
-import { ApiError, getTenant, setTenantSheet, type TenantInfo } from "../api/client";
+import {
+  ApiError,
+  type GoogleStatus,
+  type TenantInfo,
+  getTenant,
+  googleConnect,
+  googleSetSources,
+  googleStatus as fetchGoogleStatus,
+  pickerUrl,
+  setTenantSheet,
+} from "../api/client";
+import {
+  GoogleCancelled,
+  googleConfigured,
+  signInForServerCode,
+} from "../auth/google";
 import { useAuth } from "../auth/AuthContext";
 
 export default function ConfigScreen() {
   const { token, profile, logout } = useAuth();
-  const [info, setInfo] = useState<TenantInfo | null>(null);
-  const [sheet, setSheet] = useState("");
+  const [tenant, setTenant] = useState<TenantInfo | null>(null);
+  const [gstatus, setGstatus] = useState<GoogleStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [gBusy, setGBusy] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [sheet, setSheet] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -24,8 +45,12 @@ export default function ConfigScreen() {
 
   async function refresh() {
     try {
-      const t = await getTenant(token);
-      setInfo(t);
+      const [t, g] = await Promise.all([
+        getTenant(token),
+        fetchGoogleStatus(token),
+      ]);
+      setTenant(t);
+      setGstatus(g);
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 401) return logout();
       setMsg(e.message);
@@ -38,7 +63,50 @@ export default function ConfigScreen() {
     refresh();
   }, []);
 
-  async function save() {
+  async function connectGoogle() {
+    setMsg(null);
+    setGBusy(true);
+    try {
+      const code = await signInForServerCode();
+      const g = await googleConnect(token, code);
+      setGstatus(g);
+      setMsg("✅ Cuenta de Google conectada. Ahora elige tus hojas.");
+    } catch (e: any) {
+      if (e instanceof GoogleCancelled) return;
+      if (e instanceof ApiError && e.status === 401) return logout();
+      setMsg(`⚠️ ${e.message ?? "No se pudo conectar con Google"}`);
+    } finally {
+      setGBusy(false);
+    }
+  }
+
+  async function onPickerMessage(ev: WebViewMessageEvent) {
+    let payload: any;
+    try {
+      payload = JSON.parse(ev.nativeEvent.data);
+    } catch {
+      return;
+    }
+    if (payload?.status === "cancel") {
+      setPickerOpen(false);
+      return;
+    }
+    if (payload?.status !== "picked") return;
+    setPickerOpen(false);
+    setGBusy(true);
+    try {
+      const g = await googleSetSources(token, payload.files ?? []);
+      setGstatus(g);
+      setMsg(`✅ ${payload.files?.length ?? 0} archivo(s) conectado(s).`);
+    } catch (e: any) {
+      if (e instanceof ApiError && e.status === 401) return logout();
+      setMsg(`⚠️ ${e.message}`);
+    } finally {
+      setGBusy(false);
+    }
+  }
+
+  async function saveServiceAccountSheet() {
     setMsg(null);
     if (sheet.trim().length < 8) {
       setMsg("Pega el enlace o el ID de la hoja.");
@@ -47,9 +115,9 @@ export default function ConfigScreen() {
     setSaving(true);
     try {
       const t = await setTenantSheet(token, sheet.trim());
-      setInfo(t);
+      setTenant(t);
       setSheet("");
-      setMsg("✅ Hoja conectada. Ya puedes consultar tus datos reales.");
+      setMsg("✅ Hoja conectada (modo service account).");
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 401) return logout();
       setMsg(`⚠️ ${e.message}`);
@@ -66,76 +134,173 @@ export default function ConfigScreen() {
     );
   }
 
+  const oauthReady = googleConfigured && gstatus?.oauth_configured;
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ padding: 20, gap: 14 }}
-    >
-      <Text style={styles.title}>Google Sheets</Text>
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ padding: 20, gap: 14 }}
+      >
+        <Text style={styles.title}>Datos de la empresa</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Empresa</Text>
-        <Text style={styles.value}>{info?.name}</Text>
-        <Text style={styles.label}>Estado</Text>
-        <Text style={styles.value}>
-          {info?.sheet_configured
-            ? `Conectada (…${info.sheet_id?.slice(-6)})`
-            : "Sin hoja conectada"}
-        </Text>
-        {info?.is_demo && (
-          <Text style={styles.demo}>
-            Modo demo: los cambios no se guardan.
-          </Text>
-        )}
-      </View>
-
-      {info?.service_account_email ? (
         <View style={styles.card}>
-          <Text style={styles.label}>Comparte tu hoja con este email</Text>
-          <Text selectable style={styles.email}>
-            {info.service_account_email}
-          </Text>
-          <Text style={styles.hint}>
-            En Google Sheets: Compartir → pega este email → permiso de Lector.
-          </Text>
+          <Text style={styles.label}>Empresa</Text>
+          <Text style={styles.value}>{tenant?.name}</Text>
+          {tenant?.is_demo && (
+            <Text style={styles.demo}>
+              Modo demo: los cambios no se guardan en una base real.
+            </Text>
+          )}
         </View>
-      ) : (
-        <Text style={styles.hint}>
-          El backend aún no tiene credenciales de Google configuradas
-          (GOOGLE_CREDENTIALS_PATH).
-        </Text>
-      )}
 
-      {isAdmin ? (
+        {/* --- Camino recomendado: Google --- */}
         <View style={styles.card}>
-          <Text style={styles.label}>Enlace o ID de la hoja</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="https://docs.google.com/spreadsheets/d/…"
-            autoCapitalize="none"
-            value={sheet}
-            onChangeText={setSheet}
-          />
-          <TouchableOpacity
-            style={[styles.btn, saving && styles.btnDisabled]}
-            onPress={save}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnText}>Guardar</Text>
+          <Text style={styles.label}>Conectar con Google</Text>
+
+          {!googleConfigured && (
+            <Text style={styles.hint}>
+              Frontend sin configurar: define EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+              en frontend/.env y reconstruye el dev build.
+            </Text>
+          )}
+          {googleConfigured && !gstatus?.oauth_configured && (
+            <Text style={styles.hint}>
+              Backend sin configurar: completa GOOGLE_OAUTH_* y TOKEN_ENC_KEY
+              en backend/.env (ver README §7).
+            </Text>
+          )}
+
+          {oauthReady && !gstatus?.connected && isAdmin && (
+            <TouchableOpacity
+              style={[styles.btn, gBusy && styles.btnDisabled]}
+              onPress={connectGoogle}
+              disabled={gBusy}
+              accessibilityLabel="Conectar con Google"
+            >
+              {gBusy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.btnText}>Conectar con Google</Text>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {oauthReady && gstatus?.connected && (
+            <>
+              <Text style={styles.value}>{gstatus.email}</Text>
+              <Text style={styles.label}>Hojas conectadas</Text>
+              {gstatus.sources.length === 0 ? (
+                <Text style={styles.hint}>
+                  Aún no has elegido archivos.
+                </Text>
+              ) : (
+                gstatus.sources.map((s) => (
+                  <Text key={s.id} style={styles.source} numberOfLines={1}>
+                    • {s.name ?? s.id}
+                  </Text>
+                ))
+              )}
+              {isAdmin && (
+                <TouchableOpacity
+                  style={[styles.btn, gBusy && styles.btnDisabled]}
+                  onPress={() => setPickerOpen(true)}
+                  disabled={gBusy}
+                >
+                  <Text style={styles.btnText}>
+                    {gstatus.sources.length === 0
+                      ? "Elegir hojas"
+                      : "Cambiar selección"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+
+          {!isAdmin && (
+            <Text style={styles.hint}>
+              Solo el administrador puede gestionar la conexión.
+            </Text>
+          )}
+        </View>
+
+        {/* --- Avanzado: service account --- */}
+        <TouchableOpacity onPress={() => setShowAdvanced((v) => !v)}>
+          <Text style={styles.link}>
+            {showAdvanced ? "Ocultar" : "Mostrar"} opciones avanzadas
+            (compartir hoja manualmente)
+          </Text>
+        </TouchableOpacity>
+
+        {showAdvanced && (
+          <View style={styles.card}>
+            <Text style={styles.label}>Hoja actual (service account)</Text>
+            <Text style={styles.value}>
+              {tenant?.sheet_configured
+                ? `Conectada (…${tenant.sheet_id?.slice(-6)})`
+                : "Sin hoja conectada"}
+            </Text>
+            {tenant?.service_account_email && (
+              <>
+                <Text style={styles.label}>
+                  Comparte tu hoja con este email
+                </Text>
+                <Text selectable style={styles.email}>
+                  {tenant.service_account_email}
+                </Text>
+                <Text style={styles.hint}>
+                  Compartir → pega este email → permiso de Lector.
+                </Text>
+              </>
             )}
+            {isAdmin && (
+              <>
+                <Text style={styles.label}>Enlace o ID de la hoja</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="https://docs.google.com/spreadsheets/d/…"
+                  autoCapitalize="none"
+                  value={sheet}
+                  onChangeText={setSheet}
+                />
+                <TouchableOpacity
+                  style={[styles.btn, saving && styles.btnDisabled]}
+                  onPress={saveServiceAccountSheet}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.btnText}>Guardar</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
+
+        {msg && <Text style={styles.msg}>{msg}</Text>}
+      </ScrollView>
+
+      <Modal
+        visible={pickerOpen}
+        animationType="slide"
+        onRequestClose={() => setPickerOpen(false)}
+      >
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Elegir hojas</Text>
+          <TouchableOpacity onPress={() => setPickerOpen(false)} hitSlop={10}>
+            <Text style={styles.modalClose}>Cerrar</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <Text style={styles.hint}>
-          Solo el administrador puede cambiar la hoja.
-        </Text>
-      )}
-
-      {msg && <Text style={styles.msg}>{msg}</Text>}
-    </ScrollView>
+        <WebView
+          source={{ uri: pickerUrl(token) }}
+          onMessage={onPickerMessage}
+          javaScriptEnabled
+          domStorageEnabled
+        />
+      </Modal>
+    </>
   );
 }
 
@@ -152,7 +317,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 14,
     padding: 16,
-    gap: 6,
+    gap: 8,
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
@@ -166,6 +331,8 @@ const styles = StyleSheet.create({
   email: { fontSize: 14, color: "#2563eb", fontWeight: "600" },
   hint: { fontSize: 13, color: "#64748b" },
   demo: { fontSize: 13, color: "#b45309", marginTop: 4 },
+  source: { fontSize: 14, color: "#0f172a" },
+  link: { color: "#2563eb", fontWeight: "600", marginTop: 4 },
   input: {
     backgroundColor: "#f1f5f9",
     borderRadius: 10,
@@ -177,11 +344,22 @@ const styles = StyleSheet.create({
   btn: {
     backgroundColor: "#2563eb",
     borderRadius: 10,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: "center",
-    marginTop: 4,
+    marginTop: 6,
   },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: "#fff", fontWeight: "700" },
+  btnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   msg: { fontSize: 14, color: "#0f172a" },
+  modalHeader: {
+    backgroundColor: "#0f172a",
+    paddingTop: 56,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  modalTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  modalClose: { color: "#93c5fd", fontWeight: "600" },
 });
