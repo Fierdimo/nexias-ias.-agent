@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from fastapi import Depends, Header, HTTPException, status
 
 from app.config import Settings, get_settings
-from app.db.supabase_client import get_supabase
+from app.db.supabase_client import get_supabase, with_retry
 
 DEMO_USER = {
     "user_id": "demo-user",
@@ -38,8 +38,9 @@ def resolve_membership(supabase, user_id: str) -> tuple[str, str] | None:
     Tabla esperada: memberships(user_id uuid, tenant_id uuid, role text).
     Reutilizado por get_current_user y por los endpoints de /auth.
     """
-    res = (
-        supabase.table("memberships")
+    res = with_retry(
+        lambda: get_supabase()
+        .table("memberships")
         .select("tenant_id, role")
         .eq("user_id", user_id)
         .limit(1)
@@ -74,7 +75,7 @@ def resolve_user_from_token(
         raise HTTPException(status_code=500, detail="Supabase no disponible")
 
     try:
-        result = supabase.auth.get_user(token)
+        result = with_retry(lambda: get_supabase().auth.get_user(token))
         auth_user = result.user
     except Exception:
         auth_user = None

@@ -34,7 +34,13 @@ export default function App() {
           setSession(saved);
         } catch (e) {
           if (e instanceof ApiError && e.status === 401) {
+            // Token inválido/expirado: limpiar y mostrar login.
             await clearSession();
+          } else {
+            // 500, red caída, error transitorio: rescatamos la sesión
+            // guardada. Si el token ya no sirve, una llamada autenticada
+            // posterior dará 401 y el handler hará logout.
+            setSession(saved);
           }
         }
       }

@@ -18,7 +18,7 @@ from app.core.security import (
     get_current_user,
     resolve_membership,
 )
-from app.db.supabase_client import get_supabase
+from app.db.supabase_client import get_supabase, with_retry
 from app.schemas.auth import AuthResponse, LoginRequest, Profile, SignupRequest
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -120,8 +120,10 @@ def login(
         raise HTTPException(status_code=500, detail="Supabase no disponible")
 
     try:
-        result = supabase.auth.sign_in_with_password(
-            {"email": req.email, "password": req.password}
+        result = with_retry(
+            lambda: get_supabase().auth.sign_in_with_password(
+                {"email": req.email, "password": req.password}
+            )
         )
     except Exception:
         raise HTTPException(

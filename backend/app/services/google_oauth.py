@@ -14,7 +14,7 @@ import httpx
 from cryptography.fernet import Fernet
 
 from app.config import get_settings
-from app.db.supabase_client import get_supabase
+from app.db.supabase_client import get_supabase, with_retry
 
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -96,31 +96,31 @@ def save_account(
     access_token: str | None,
     expires_in: int,
 ) -> None:
-    supabase = get_supabase()
-    if supabase is None:
+    if get_supabase() is None:
         return
     expiry = dt.datetime.now(dt.timezone.utc) + dt.timedelta(
         seconds=int(expires_in)
     )
-    supabase.table("google_accounts").upsert(
-        {
-            "tenant_id": tenant_id,
-            "google_email": email,
-            "refresh_token_enc": _enc(refresh_token),
-            "access_token_enc": _enc(access_token) if access_token else None,
-            "access_expiry": expiry.isoformat(),
-            "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-        }
-    ).execute()
+    payload = {
+        "tenant_id": tenant_id,
+        "google_email": email,
+        "refresh_token_enc": _enc(refresh_token),
+        "access_token_enc": _enc(access_token) if access_token else None,
+        "access_expiry": expiry.isoformat(),
+        "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+    }
+    with_retry(
+        lambda: get_supabase().table("google_accounts").upsert(payload).execute()
+    )
 
 
 def get_account(tenant_id: str) -> dict | None:
     """Devuelve {google_email} o None si el tenant no conectó Google."""
-    supabase = get_supabase()
-    if supabase is None:
+    if get_supabase() is None:
         return None
-    res = (
-        supabase.table("google_accounts")
+    res = with_retry(
+        lambda: get_supabase()
+        .table("google_accounts")
         .select("google_email")
         .eq("tenant_id", tenant_id)
         .limit(1)
@@ -132,11 +132,11 @@ def get_account(tenant_id: str) -> dict | None:
 
 def get_valid_access_token(tenant_id: str) -> str | None:
     """Access token vigente del tenant; refresca y persiste si expiró."""
-    supabase = get_supabase()
-    if supabase is None:
+    if get_supabase() is None:
         return None
-    res = (
-        supabase.table("google_accounts")
+    res = with_retry(
+        lambda: get_supabase()
+        .table("google_accounts")
         .select("refresh_token_enc, access_token_enc, access_expiry")
         .eq("tenant_id", tenant_id)
         .limit(1)
@@ -157,11 +157,16 @@ def get_valid_access_token(tenant_id: str) -> str | None:
         _dec(row["refresh_token_enc"])
     )
     expiry = now + dt.timedelta(seconds=int(expires_in))
-    supabase.table("google_accounts").update(
-        {
-            "access_token_enc": _enc(access_token),
-            "access_expiry": expiry.isoformat(),
-            "updated_at": now.isoformat(),
-        }
-    ).eq("tenant_id", tenant_id).execute()
+    upd = {
+        "access_token_enc": _enc(access_token),
+        "access_expiry": expiry.isoformat(),
+        "updated_at": now.isoformat(),
+    }
+    with_retry(
+        lambda: get_supabase()
+        .table("google_accounts")
+        .update(upd)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
     return access_token
