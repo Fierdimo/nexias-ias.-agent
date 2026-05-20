@@ -40,6 +40,14 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.REEMPLAZA_CON_TU_IOS_CLIENT_ID"
         }
+      ],
+      [
+        "@jamsch/expo-speech-recognition",
+        {
+          "microphonePermission": "Nexias usa el micrófono para escuchar tus consultas en lenguaje natural.",
+          "speechRecognitionPermission": "Nexias convierte tu voz en texto para responder consultas sobre tus datos.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
       ]
     ]
   }

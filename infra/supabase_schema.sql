@@ -37,10 +37,13 @@ create index if not exists query_log_tenant_idx on query_log (tenant_id, created
 alter table memberships enable row level security;
 alter table query_log enable row level security;
 
+-- Idempotente: Postgres no soporta CREATE POLICY IF NOT EXISTS.
+drop policy if exists "miembro ve su membership" on memberships;
 create policy "miembro ve su membership"
   on memberships for select
   using (user_id = auth.uid());
 
+drop policy if exists "miembro ve logs de su tenant" on query_log;
 create policy "miembro ve logs de su tenant"
   on query_log for select
   using (
