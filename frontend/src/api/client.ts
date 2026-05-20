@@ -46,7 +46,14 @@ export type TenantInfo = {
   is_demo: boolean;
 };
 
-export type PickedFile = { id: string; name?: string; mimeType?: string };
+export type PickedFile = {
+  id: string;
+  name?: string;
+  mimeType?: string;
+  schema_summary?: string | null;
+  schema_source?: "ai" | "heuristic" | null;
+  schema_columns?: { name: string; role: string }[] | null;
+};
 
 export type GoogleStatus = {
   oauth_configured: boolean;
@@ -152,6 +159,13 @@ export function googleSetSources(token: string, files: PickedFile[]) {
     body: { files },
     token,
   });
+}
+
+export function reanalyzeSource(token: string, fileId: string) {
+  return request<GoogleStatus>(
+    `/google/sources/${encodeURIComponent(fileId)}/analyze`,
+    { method: "POST", token }
+  );
 }
 
 /** URL del Picker para abrir en un WebView (auth por query param). */

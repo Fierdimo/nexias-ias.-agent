@@ -198,6 +198,25 @@ vía OAuth (prioridad sobre el service account).
 
 `GET /health` y `GET /google/status` confirman si está configurado.
 
+## 8. Esquema flexible (Fase 1.5)
+
+Nexias entiende **cualquier hoja**, no solo el modelo `fecha|producto|…`.
+Al elegir un archivo en el Picker, el backend:
+
+1. **Perfila** la hoja: detecta tipos por columna (fecha / número / texto),
+   muestras y conteos. Determinista, sin IA.
+2. **Asigna roles** a cada columna (`date`, `revenue`, `quantity`,
+   `category`, `id`, `ignore`). Heurística por palabras clave + tipos
+   como base; si el LLM está configurado, refina con JSON estricto.
+3. **Guarda el esquema** en `data_sources.schema_json` (1 sola vez por
+   hoja). El chat usa ese esquema para calcular métricas dinámicas
+   (totales por columna revenue, top por categoría, variación semanal)
+   con **pandas → anti-alucinación**.
+
+En Configuración cada hoja muestra resumen, chips de rol y un botón
+**Re-analizar** (`POST /google/sources/{id}/analyze`) para refrescar el
+esquema si la hoja cambia.
+
 ## Arquitectura clave (anti-alucinación)
 
 ```

@@ -69,9 +69,17 @@ create table if not exists data_sources (
   file_id text not null,
   name text,
   mime_type text,
+  -- Esquema inferido (perfil + roles por columna + resumen).
+  -- jsonb para poder consultar y para que crezca sin migraciones.
+  schema_json jsonb,
+  schema_updated_at timestamptz,
   created_at timestamptz default now(),
   unique (tenant_id, file_id)
 );
+
+-- Idempotente para bases ya creadas.
+alter table data_sources add column if not exists schema_json jsonb;
+alter table data_sources add column if not exists schema_updated_at timestamptz;
 
 create index if not exists data_sources_tenant_idx on data_sources (tenant_id);
 

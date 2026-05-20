@@ -40,11 +40,17 @@ Hoy la analítica asume columnas fijas
 (`fecha|producto|categoria|cantidad|ingresos`). Para servir a cualquier
 empresa, las columnas deben ser libres y entendidas por IA.
 
-- [ ] Perfilado automático de la hoja (tipos, columnas, fechas, numéricas)
-- [ ] Métricas genéricas según el perfil (no hardcodear nombres de columna)
-- [ ] El LLM interpreta el esquema y la intención de la consulta
-- [ ] Cálculos deterministas (pandas) sobre columnas detectadas → anti-alucinación
-- [ ] Dataset de muestra genérico (no específico de restaurante)
+- [x] Perfilado automático de la hoja (tipos, muestras, conteos)
+- [x] Asignación de roles por columna: heurística + LLM (JSON estricto)
+- [x] Esquema persistido por hoja (`data_sources.schema_json`)
+- [x] Inferencia automática al seleccionar archivos en el Picker
+- [x] Endpoint `POST /google/sources/{id}/analyze` para re-analizar
+- [x] Métricas dinámicas por roles (`build_metrics_dynamic`)
+- [x] Cálculos deterministas (pandas) sobre columnas detectadas → anti-alucinación
+- [x] UI: tarjeta por hoja con resumen, chips de rol y botón Re-analizar
+- [ ] Permitir al usuario editar manualmente los roles asignados
+- [ ] Dataset de muestra genérico (no específico de un sector)
+- [ ] Soporte para múltiples hojas combinadas en una consulta
 
 ## Fase 2 — IA sobre documentos (RAG completo)
 

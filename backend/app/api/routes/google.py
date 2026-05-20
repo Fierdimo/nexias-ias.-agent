@@ -23,13 +23,18 @@ from app.schemas.google import (
     PickedFile,
     SourcesRequest,
 )
-from app.services.data_sources import list_sources, replace_sources
+from app.services.data_sources import (
+    SPREADSHEET_MIME,
+    list_sources,
+    replace_sources,
+)
 from app.services.google_oauth import (
     exchange_code,
     get_account,
     get_valid_access_token,
     save_account,
 )
+from app.services.sheet_analyzer import analyze_source
 
 router = APIRouter(prefix="/google", tags=["google"])
 
@@ -52,12 +57,19 @@ def status_(
             oauth_configured=False, connected=False, is_demo=not settings.has_supabase
         )
     acct = get_account(user.tenant_id)
-    sources = [
-        PickedFile(
-            id=s["file_id"], name=s.get("name"), mimeType=s.get("mime_type")
+    sources = []
+    for s in list_sources(user.tenant_id):
+        schema = s.get("schema_json") or {}
+        sources.append(
+            PickedFile(
+                id=s["file_id"],
+                name=s.get("name"),
+                mimeType=s.get("mime_type"),
+                schema_summary=schema.get("summary"),
+                schema_source=schema.get("source"),
+                schema_columns=schema.get("columns"),
+            )
         )
-        for s in list_sources(user.tenant_id)
-    ]
     return GoogleStatus(
         oauth_configured=True,
         connected=acct is not None,
@@ -105,6 +117,26 @@ def set_sources(
     replace_sources(
         user.tenant_id, [f.model_dump() for f in req.files]
     )
+    # Inferencia automática del esquema para cada spreadsheet elegida.
+    # Best-effort: si falla una hoja, las demás siguen.
+    for f in req.files:
+        if f.mimeType == SPREADSHEET_MIME:
+            try:
+                analyze_source(user.tenant_id, f.id, f.name)
+            except Exception:
+                pass
+    return status_(user=user, settings=settings)
+
+
+@router.post("/sources/{file_id}/analyze", response_model=GoogleStatus)
+def reanalyze(
+    file_id: str,
+    user: CurrentUser = Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
+) -> GoogleStatus:
+    """Re-analiza una hoja existente para refrescar su esquema."""
+    _require_admin(user)
+    analyze_source(user.tenant_id, file_id)
     return status_(user=user, settings=settings)
 
 

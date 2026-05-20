@@ -14,9 +14,10 @@ from app.core.security import CurrentUser, get_current_user
 from app.db.supabase_client import get_supabase
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.config import get_settings
-from app.services.analytics import build_metrics
-from app.services.data_sources import first_spreadsheet_id
+from app.services.analytics import build_metrics, build_metrics_dynamic
+from app.services.data_sources import first_spreadsheet_id, get_schema
 from app.services.google_oauth import get_valid_access_token
+from app.services.sheet_analyzer import analyze_source
 from app.services.llm import get_llm
 from app.services.sheets import (
     SheetAccessError,
@@ -46,6 +47,7 @@ def chat(
     #   2) hoja vía service account (tenants.sheet_id, fallback)
     #   3) dataset de muestra
     settings = get_settings()
+    schema: dict | None = None
     try:
         oauth_sheet = (
             first_spreadsheet_id(user.tenant_id)
@@ -60,6 +62,10 @@ def chat(
                     "Configuración."
                 )
             df, is_demo = load_sales_oauth(oauth_sheet, access_token)
+            schema = get_schema(user.tenant_id, oauth_sheet)
+            if not schema:
+                # Hoja sin analizar todavía: la inferimos al vuelo.
+                schema = analyze_source(user.tenant_id, oauth_sheet)
         else:
             tenant = get_tenant(user.tenant_id)
             sheet_id = tenant.get("sheet_id") if tenant else None
@@ -78,7 +84,12 @@ def chat(
     if "tenant_id" in df.columns:
         df = df[df["tenant_id"].astype(str) == user.tenant_id]
 
-    metrics = build_metrics(df)
+    # Si tenemos esquema (camino OAuth o legacy con esquema persistido),
+    # usamos métricas dinámicas por roles; si no, el cálculo legacy
+    # asume columnas fijas (compatibilidad).
+    metrics = (
+        build_metrics_dynamic(df, schema) if schema else build_metrics(df)
+    )
 
     user_prompt = (
         f"Pregunta del usuario:\n{req.message}\n\n"

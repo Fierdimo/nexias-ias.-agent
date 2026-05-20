@@ -20,6 +20,7 @@ import {
   googleSetSources,
   googleStatus as fetchGoogleStatus,
   pickerUrl,
+  reanalyzeSource,
   setTenantSheet,
 } from "../api/client";
 import {
@@ -75,6 +76,21 @@ export default function ConfigScreen() {
       if (e instanceof GoogleCancelled) return;
       if (e instanceof ApiError && e.status === 401) return logout();
       setMsg(`⚠️ ${e.message ?? "No se pudo conectar con Google"}`);
+    } finally {
+      setGBusy(false);
+    }
+  }
+
+  async function onReanalyze(fileId: string) {
+    setMsg(null);
+    setGBusy(true);
+    try {
+      const g = await reanalyzeSource(token, fileId);
+      setGstatus(g);
+      setMsg("✅ Esquema actualizado.");
+    } catch (e: any) {
+      if (e instanceof ApiError && e.status === 401) return logout();
+      setMsg(`⚠️ ${e.message}`);
     } finally {
       setGBusy(false);
     }
@@ -196,9 +212,54 @@ export default function ConfigScreen() {
                 </Text>
               ) : (
                 gstatus.sources.map((s) => (
-                  <Text key={s.id} style={styles.source} numberOfLines={1}>
-                    • {s.name ?? s.id}
-                  </Text>
+                  <View key={s.id} style={styles.sourceCard}>
+                    <Text style={styles.sourceName} numberOfLines={1}>
+                      {s.name ?? s.id}
+                    </Text>
+                    {s.schema_summary ? (
+                      <Text style={styles.sourceSummary}>
+                        {s.schema_summary}
+                      </Text>
+                    ) : (
+                      <Text style={styles.hint}>
+                        Aún no analizado. Re-analiza para que la IA entienda
+                        las columnas.
+                      </Text>
+                    )}
+                    {s.schema_columns && s.schema_columns.length > 0 && (
+                      <View style={styles.chipsRow}>
+                        {s.schema_columns
+                          .filter((c) => c.role !== "ignore")
+                          .map((c) => (
+                            <View
+                              key={c.name}
+                              style={[
+                                styles.chip,
+                                roleColor(c.role),
+                              ]}
+                            >
+                              <Text style={styles.chipText} numberOfLines={1}>
+                                {c.name}: {c.role}
+                              </Text>
+                            </View>
+                          ))}
+                      </View>
+                    )}
+                    {s.schema_source && (
+                      <Text style={styles.hint}>
+                        Esquema por{" "}
+                        {s.schema_source === "ai" ? "IA" : "reglas"}
+                      </Text>
+                    )}
+                    {isAdmin && (
+                      <TouchableOpacity
+                        onPress={() => onReanalyze(s.id)}
+                        disabled={gBusy}
+                      >
+                        <Text style={styles.link}>Re-analizar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 ))
               )}
               {isAdmin && (
@@ -304,8 +365,49 @@ export default function ConfigScreen() {
   );
 }
 
+function roleColor(role: string) {
+  switch (role) {
+    case "date":
+      return { backgroundColor: "#dbeafe" };
+    case "revenue":
+      return { backgroundColor: "#dcfce7" };
+    case "quantity":
+      return { backgroundColor: "#fef3c7" };
+    case "category":
+      return { backgroundColor: "#ede9fe" };
+    case "id":
+      return { backgroundColor: "#f1f5f9" };
+    default:
+      return { backgroundColor: "#f1f5f9" };
+  }
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
+  sourceCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 4,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  sourceName: { fontSize: 14, fontWeight: "700", color: "#0f172a" },
+  sourceSummary: { fontSize: 13, color: "#334155" },
+  chipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+  },
+  chip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    maxWidth: "100%",
+  },
+  chipText: { fontSize: 11, color: "#0f172a" },
   center: {
     flex: 1,
     alignItems: "center",

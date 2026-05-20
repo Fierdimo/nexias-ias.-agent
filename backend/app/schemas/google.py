@@ -12,6 +12,10 @@ class PickedFile(BaseModel):
     id: str
     name: str | None = None
     mimeType: str | None = None
+    # Metadata del esquema inferido (presente solo en respuestas).
+    schema_summary: str | None = None
+    schema_source: str | None = None  # "ai" | "heuristic"
+    schema_columns: list[dict] | None = None  # [{name, role}, ...]
 
 
 class SourcesRequest(BaseModel):
